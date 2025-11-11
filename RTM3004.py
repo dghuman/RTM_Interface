@@ -1,7 +1,5 @@
 import time
 import pyvisa
-import numpy as np
-import logging
 
 class RTM3004():
     '''This class creates an instance for the RTM3004 oscilloscope
