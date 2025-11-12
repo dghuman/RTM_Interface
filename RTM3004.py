@@ -1,526 +1,1100 @@
 import time
 import pyvisa
 
-class RTM3004():
-    '''This class creates an instance for the RTM3004 oscilloscope
+
+class RTM3004:
+    """
+    This class creates an instance for the RTM3004 oscilloscope
     as a pyvisa instrument.
-    '''
-        
-    def __init__(self, device='IP_ADDRESS_OF_DEVICE'):
-        print('Initializing RTM3004 oscilloscope...')
+
+    Attributes:
+        instrument: The instrument opened using pyvisa.ResourceManager.
+        name: Device IP on the network.
+        connected: Boolean stating connection is made.
+        SimpleMeasurementSatus: Boolean stating that the "SimpleMeasurement" has been setup. Refer to "SimpleMeasurement" method.
+        SimpleSetupStatus: Boolean stating that the "SimpleSetup" has been setup. Refer to "SimpleSetup" method.
+        wavevolt: Float of the amplitude for the waveform generator output.
+    """
+
+    def __init__(self, device_ip):
+        """
+        Intialization of object.
+
+        Args:
+            device_ip: IP address of the oscilloscope on the network. \\
+                Requires that the RTM3004 is connected to the network, and recommended to have either a static IP or hostname
+
+        Return: RTM3004 instrument class instance/object.
+        """
+        print("Initializing RTM3004 oscilloscope...")
         ResourceManager = pyvisa.ResourceManager()
-        self.instrument = ResourceManager.open_resource(device)
-        self.instrument.timeout = 60*1000
-        self.name = device
+        self.instrument = ResourceManager.open_resource(device_ip)
+        self.instrument.timeout = 60 * 1000
+        self.name = device_ip
         self.connected = True
         self.SimpleMeasurementStatus = False
-        self.SimpleSetupStatus = False        
+        self.SimpleSetupStatus = False
         self.wavevolt = 0
         self.reset()
-        print('... done.\n')
+        print("... done.\n")
 
     def write(self, message):
+        '''
+        Wrapper for writing message to the instrument via PyVisa.
+
+        Args:
+            message: String of the message being sent. Accepts the R&S RTM3004 protocol.
+
+        Return: None
+        '''
         self.instrument.write(message)
         time.sleep(0.01)
-        return
+        return 
 
     def ask(self, message):
+        '''
+        Query the instrument using the PyVisa connection.
+
+        Args: 
+            message: String of the query. Accepts the R&S RTM3004 protocol.
+
+        Return: String of returned message.
+        '''
         response = self.instrument.query(message)
         return response
 
     def identify(self):
-        return self.ask('*IDN?')
-   
+        '''
+        Identify the instrument by returning it's ID.
+
+        Args: 
+            None
+
+        Return: String of returned message.
+        '''
+        return self.ask("*IDN?")
+
     def reset(self):
-        self.write('*RST')
+        '''
+        Reset the device to it's default boot-up state. 
+
+        Args: 
+            None
+
+        Return: None
+        '''
+        self.write("*RST")
 
     def wait(self, dt=0.5):
+        '''
+        Sleep loop until the oscilloscope returns a ready status.
+
+        Args: 
+            dt: Float of the time to wait between oscilloscope queries.
+
+        Return: None
+        '''
         while True:
-            done = self.ask('*OPC?')
-            if done == '1\n':
+            done = self.ask("*OPC?")
+            if done == "1\n":
                 break
             time.sleep(dt)
 
     def getTermination(self, channel=1):
-        return self.ask('PROB%i:SET:IMP?' %(channel))
-    
-    def setBandwidth(self, channel=1, bw='FULL'):
-        # bandwidth of the channel, MHz
-        # available values FULL|B20
-        self.write('CHAN%i:BAND %s' %(channel, bw))
+        '''
+        Return termination impedance of channel queried.
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4]
+
+        Return: String of impedance.
+        '''
+        return self.ask("PROB%i:SET:IMP?" % (channel))
+
+    def setBandwidth(self, channel=1, bw="FULL"):
+        '''
+        Set bandwidth of one of the channels.
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+            bw: String of bandwidth setting, options of "FULL" or "B20".
+
+        Return: None
+        '''
+        self.write("CHAN%i:BAND %s" % (channel, bw))
 
     def getBandwidth(self, channel=1):
-        return self.ask('CHAN%i:BAND?' %(channel))
+        '''
+        Return bandwidth of on of the channels.
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+
+        Return: String of bandwidth setting.
+        '''
+        return self.ask("CHAN%i:BAND?" % (channel))
 
     ######################################################
-    # HORIZONTAL 
+    # HORIZONTAL
     ######################################################
 
     def setHorizontalScale(self, div=50e-4):
-        # scale of one div in horizontal, seconds [1e-6, ...] s/div
-        self.write('TIM:SCAL %.2e' %(div))
+        '''
+        Set the horizontal scale of the oscilloscope screen being viewed. 
+
+        Args: 
+            div: float for the division scaling. Scale of one div in [1e-6, ...] s/div.
+
+        Return: None
+        '''
+        self.write("TIM:SCAL %.2e" % (div))
 
     def getHorizontalScale(self):
-        return self.ask('TIM:SCAL?')
+        '''
+        Get the horizontal scale of the oscilloscope screen being viewed. 
+
+        Args: 
+            None
+
+        Return: String of the set horizontal division in seconds.
+        '''
+        return self.ask("TIM:SCAL?")
 
     def setHorizontalPosition(self, t=0):
-        # horizontal position of trigger edge on display
-        self.write('TIM:POS %.6f' %(t))
+        '''
+        Set the horizontal position of the trigger edge on the display.
+
+        Args: 
+            t: Float of time offset on the display.
+
+        Return: None
+        '''
+        self.write("TIM:POS %.6f" % (t))
 
     def getHorizontalPosition(self):
-        return self.ask('TIM:POS?')
+        '''
+        Get the horizontal position of the trigger edge on the display.
+
+        Args: 
+            None
+
+        Return: String of horizontal time position.
+        '''
+        return self.ask("TIM:POS?")
 
     ######################################################
-    # VERTICAL 
+    # VERTICAL
     ######################################################
 
     def setVerticalScale(self, channel=1, div=5e-4):
-        # scale of one div in vertical, Volts, [1e-3, 10]
-        self.write('CHAN%i:SCAL %.3f' %(channel, div))
+        '''
+        Set vertical scale of the display in a particular channel. 
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+            div: Float setting of one div in the vertical scale, range in [1e-3..10] in Volts.
+
+        Return: None
+        '''
+        self.write("CHAN%i:SCAL %.3f" % (channel, div))
 
     def getVerticalScale(self, channel=1):
-        return self.ask('CHAN%i:SCAL?' %(channel))
+        '''
+        Get vertical scale of the display in a particular channel. 
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+
+        Return: String of the channel vertical scaling of the display.
+        '''
+        return self.ask("CHAN%i:SCAL?" % (channel))
 
     def setVerticalPosition(self, channel=1, div=0):
-        # vertical position of trace, divs
-        self.write('CHAN%i:POS %.2f' %(channel, div))
+        '''
+        Set vertical position of the display in a particular channel. 
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+            div: Float setting of the vertical position in Volts per division.
+
+        Return: None
+        '''
+        self.write("CHAN%i:POS %.2f" % (channel, div))
 
     def getVerticalPosition(self, channel=1):
-        return self.ask('CHAN%i:POS?' %(channel))
+        '''
+        Get vertical position of the display in a particular channel. 
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+
+        Return: String of the channel vertical position of the display.
+        '''
+        return self.ask("CHAN%i:POS?" % (channel))
 
     def setVerticalOffset(self, channel=1, offset=0):
-        # offset of trace, Volts
-        self.write('CHAN%i:OFFS %.2f' %(channel, offset))
+        '''
+        Set vertical offset of the display in a particular channel. 
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+            offset: Float setting of the vertical position in Volts. NOTE: different from setVerticalPosition as it sets in Volts rather than volts/div.
+
+        Return: None
+        '''
+        self.write("CHAN%i:OFFS %.2f" % (channel, offset))
 
     def getVerticalOffset(self, channel=1):
-        return self.ask('CHAN%i:OFFS?' %(channel))
+        '''
+        Get vertical offset of the display in a particular channel. 
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+
+        Return: String of the channel vertical offset of the display.
+        '''
+        return self.ask("CHAN%i:OFFS?" % (channel))
 
     def checkClipping(self, index=1):
-        # Checks if the index in question is clipping above the screen limit. Requires that the index passed is for the Vpp for a particular channel
-        status = (self.getMeasurementResult(index) == '9.91E+37\n')
+        '''
+        Check if a particular index is clipping above the screen limits. Index is set as a measurement and should be set to measuring the Vpp.
+
+        Args: 
+            index: Int of the index. 
+
+        Return: Boolean of whether the index is clipping. 
+        '''
+        status = self.getMeasurementResult(index) == "9.91E+37\n"
         return status
 
     def fixClipping(self, index=1, channel=1, scale=5e-3):
-        # Channel to check and index that contains the Vpp for that particular channel
+        '''
+        Custom loop that attempts to fix the clipping channel by verifying through a particular index. 
+
+        Args: 
+            index: Int of the index. 
+            channel: Int of channel to be queried in range [1..4].
+            scale: Float starting vertical scale of display. Loop internally increases scale by 25% each time until clipping is resolved.
+
+        Return: Float of final vertical scale that resolved clipping.
+        '''
         self.setVerticalScale(channel=channel, div=scale)
         time.sleep(2)
         inscale = scale
         while self.checkClipping(index=index):
             inscale = self.getVerticalScale(channel=channel)
-            inscale = 1.25*float(inscale[:-1])
+            inscale = 1.25 * float(inscale[:-1])
             self.setVerticalScale(channel=channel, div=inscale)
             time.sleep(3)
             self.wait(10)
         return inscale
 
     def fixMathClipping(self, index=1, channel=1, scale=5e-3):
-        # Channel to check and index that contains the Vpp for that particular channel
+        '''
+        Custom loop that attempts to fix the clipping Math channel by verifying through a particular index. 
+
+        Args: 
+            index: Int of the index. 
+            channel: Int of channel to be queried in range [1..4].
+            scale: Float starting vertical scale of display. Loop internally increases scale by 25% each time until clipping is resolved.
+
+        Return: Float of final vertical scale that resolved clipping.
+        '''
         self.setMathScale(index=channel, scale=scale)
         time.sleep(2)
         while self.checkClipping(index=index):
             inscale = self.getMathScale(index=channel)
-            inscale = 1.25*float(inscale[:-1])
+            inscale = 1.25 * float(inscale[:-1])
             self.setMathScale(index=channel, div=inscale)
             time.sleep(3)
             self.wait(10)
-            
+
     ######################################################
-    # ACQUISITION 
+    # ACQUISITION
     ######################################################
 
-    def setAcquisitionType(self, mode='REF'):
-        # available modes: REFresh, AVERage, ENVelope
-        self.write('ACQ:TYPE %s' %(mode))
+    def setAcquisitionType(self, mode="REF"):
+        '''
+        Set the acquisition type of the oscilloscope. 
+        REFresh takes the whole waveform.
+        AVERage takes and displays an average waveform. 
+        ENVelope displays the envelope of the waveform.
+
+        Args: 
+            mode: String with options "REF", "AVER" and "ENV".
+
+        Return: None
+        '''
+        self.write("ACQ:TYPE %s" % (mode))
 
     def getAcquisitionType(self):
-        return self.ask('ACQ:TYPE?')
+        '''
+        Get the acquisition type of the oscilloscope. 
+        REFresh takes the whole waveform.
+        AVERage takes and displays an average waveform. 
+        ENVelope displays the envelope of the waveform.
 
-    def setAcquisitionAuto(self, mode='ON'):
-        # available modes: ON, OFF
-        self.write('ACQ:POIN:AUT %s' %(mode))
+        Args: 
+            None
+
+        Return: String of acquisition type.
+        '''
+        return self.ask("ACQ:TYPE?")
+
+    def setAcquisitionAuto(self, mode="ON"):
+        '''
+        Auto set the acquisition mode. 
+
+        Args: 
+            mode: String of "ON" or "OFF".
+
+        Return: None
+        '''
+        self.write("ACQ:POIN:AUT %s" % (mode))
 
     def getAcquisitionAuto(self):
-        return self.ask('ACQ:POIN:AUT?')
+        '''
+        Check if acquisition mode is automatic.
+
+        Args: 
+            None
+
+        Return: String of "ON" or "OFF".
+        '''
+        return self.ask("ACQ:POIN:AUT?")
 
     def setAcquisitionPoints(self, points=100e3):
-        # Set number of points in a waveform to record in a segment. Options are 5k samples to 80M samples.
-        self.write('ACQ:POIN:VAL %.3f' %(points))
+        '''
+        Set number of points in a waveform to record in a segment. Options are 5k samples to 80M samples.
+
+        Args: 
+            points: Float ranging from 5k to 80M.
+
+        Return: None
+        '''
+        self.write("ACQ:POIN:VAL %.3f" % (points))
 
     def getAcquisitionPoints(self):
-        return self.ask('ACQ:POIN:VAL?')
+        '''
+        Get number of points set in a waveform to record in a segment. 
 
-    def setAcquisitionMode(self, mode='AUT'):
-        # Set how the record length is set: AUTomatic, DMEMory, MANual
-        self.write('ACQ:MEM:MODE %s' %(mode))
+        Args: 
+            None
+
+        Return: Float of number of points.
+        '''
+        return self.ask("ACQ:POIN:VAL?")
+
+    def setAcquisitionMode(self, mode="AUT"):
+        '''
+        Set the acquisition mode of the oscilloscope, which determines how the record length is set.
+
+        Args: 
+            mode: "AUT", "DMEM" or "MAN".
+
+        Return: None
+        '''
+        self.write("ACQ:MEM:MODE %s" % (mode))
 
     def getAcquisitionMode(self):
-        return self.ask('ACQ:MEM:MODE?')
+        '''
+        Get the acquisition mode of the oscilloscope, which determines how the record length is set.
+
+        Args: 
+            None
+
+        Return: String of acquisition mode. 
+        '''
+        return self.ask("ACQ:MEM:MODE?")
 
     ######################################################
-    # TRIGGER 
+    # TRIGGER
     ######################################################
 
-    def setTriggerMode(self, src='A', mode='NORM'):
-        # available modes for A: AUTO, NORMal
-        # available modes fo B : DELay, EVENts
-        self.write('TRIG:%s:MODE %s' %(src, mode))
-    
-    def getTriggerMode(self, src='A'):
-        return self.ask('TRIG:%s:MODE?' %(src))
+    def setTriggerMode(self, src="A", mode="NORM"):
+        '''
+        Set the trigger mode for one of two sources. 
 
-    def setTriggerType(self, src='A', mode='EDGE'):
-        # available modes A: EDGE, WID, TV, RUNT, LOG, BUS, RIS, LINE
-        self.write('TRIG:%s:TYPE %s' %(src, mode))
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+            mode: String option for the trigger mode. "A" has "AUTO" or "NORM", while "B" has "DEL" or "EVENT". 
 
-    def getTriggerType(self, src='A'):
-        return self.ask('TRIG:%s:TYPE?' %(src))
+        Return: None
+        '''
+        self.write("TRIG:%s:MODE %s" % (src, mode))
 
-    def setTriggerSource(self, src='A', channel=1):
-        self.write('TRIG:%s:SOUR CH%i' %(src, channel))
+    def getTriggerMode(self, src="A"):
+        '''
+        Get the trigger mode for one of two sources. 
 
-    def getTriggerSource(self, src='A'):
-        return self.ask('TRIG:%s:SOUR?' %(src))
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
 
-    def setTriggerEdgeCoupling(self, src='A', mode='DC'):
-        # available modes: DC, LFR, AC
-        self.write('TRIG:%s:EDGE:COUP %s' %(src, mode))
+        Return: String of mode.
+        '''
+        return self.ask("TRIG:%s:MODE?" % (src))
 
-    def getTriggerEdgeCoupling(self, src='A'):
-        return self.ask('TRIG:%s:EDGE:COUP?' %(src))
+    def setTriggerType(self, src="A", mode="EDGE"):
+        '''
+        Set trigger type of a particular source. Only source "A" is listed here. 
 
-    def setTriggerEdgeSlope(self, src='A', mode='RISE'):
-        # available modes: POSitive, NEGative, EITHer
-        self.write('TRIG:%s:EDGE:SLOP %s' %(src, mode))
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+            mode: String option for the trigger mode. Options are "EDGE", "WID", "TV", "RUNT", "LOG", "BUS", "RIS" and "LINE".
 
-    def getTriggerEdgeSlope(self, src='A'):
-        return self.ask('TRIG:%s:EDGE:SLOP?' %(src))
+        Return: None
+        '''
+        self.write("TRIG:%s:TYPE %s" % (src, mode))
+
+    def getTriggerType(self, src="A"):
+        '''
+        Get trigger type of a particular source. Only source "A" is listed here. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+
+        Return: String of trigger type.
+        '''
+        return self.ask("TRIG:%s:TYPE?" % (src))
+
+    def setTriggerSource(self, src="A", channel=1):
+        '''
+        Set trigger channel of a particular source. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+            channel: Int of channel to be queried in range [1..4]
+
+        Return: None
+        '''
+        self.write("TRIG:%s:SOUR CH%i" % (src, channel))
+
+    def getTriggerSource(self, src="A"):
+        '''
+        Get trigger channel of a particular source. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+
+        Return: String of channel set as trigger source.
+        '''
+        return self.ask("TRIG:%s:SOUR?" % (src))
+
+    def setTriggerEdgeCoupling(self, src="A", mode="DC"):
+        '''
+        Set trigger edge coupling based on source. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+            mode: String to set coupling. Options are "DC", "LFR" and "AC".
+
+        Return: None
+        '''
+        self.write("TRIG:%s:EDGE:COUP %s" % (src, mode))
+
+    def getTriggerEdgeCoupling(self, src="A"):
+        '''
+        Get trigger edge coupling based on source. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+
+        Return: String of the mode.
+        '''
+        return self.ask("TRIG:%s:EDGE:COUP?" % (src))
+
+    def setTriggerEdgeSlope(self, src="A", mode="RISE"):
+        '''
+        Set trigger edge slope mode. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+            mode: String of the mode to set the trigger edge slope. Options are "POS" (positive), "NEG" (negative) and "EITH" (either). 
+
+        Return: None
+        '''
+        self.write("TRIG:%s:EDGE:SLOP %s" % (src, mode))
+
+    def getTriggerEdgeSlope(self, src="A"):
+        '''
+        Get trigger edge slope mode. 
+
+        Args: 
+            src: String determining the source of the trigger, options being "A" or "B".
+
+        Return: String of the edge trigger mode.
+        '''
+        return self.ask("TRIG:%s:EDGE:SLOP?" % (src))
 
     def setTriggerEdgeLevel(self, channel=2, level=0):
-        # trigger edge level, Volts, only available for trigger A
-        self.write('TRIG:A:LEV%i:VAL %.2f' %(channel, level))
+        '''
+        Set trigger edge level of a particular channel.
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+            level: Float trigger edge level in volts.
+
+        Return: None
+        '''
+        self.write("TRIG:A:LEV%i:VAL %.2f" % (channel, level))
 
     def getTriggerEdgeLevel(self, channel=2):
-        return self.ask('TRIG:A:LEV%i:VAL?' %(channel))
+        '''
+        Get trigger edge level of a particular channel.
+
+        Args: 
+            channel: Int of channel to be queried in range [1..4].
+
+        Return: Float of trigger edge level.
+        '''
+        return self.ask("TRIG:A:LEV%i:VAL?" % (channel))
 
     def setTriggerAutoLevel(self):
-        self.write('TRIG:A:FIND')
+        '''
+        Set trigger edge level to be automatic.
+
+        Args: 
+            None
+
+        Return: None
+        '''
+        self.write("TRIG:A:FIND")
 
     ######################################################
-    # TRIGGER B 
+    # TRIGGER B
     ######################################################
 
     def setTriggerBDelayTime(self, time=100e-9):
-        self.write('TRIG:B:DEL %.2e' %(time))
+        '''
+        Set trigger B delay time. 
+
+        Args: 
+            time: Float delay time of B trigger.
+
+        Return: None
+        '''
+        self.write("TRIG:B:DEL %.2e" % (time))
 
     def getTriggerBDelayTime(self):
-        return self.ask('TRIG:B:DEL?')
+        '''
+        Get trigger B delay time. 
+
+        Args: 
+            None
+
+        Return: Float delay time of B trigger.
+        '''
+        return self.ask("TRIG:B:DEL?")
 
     ######################################################
-    # CURVE DATA 
+    # CURVE DATA
     ######################################################
 
     def setDataSource(self, channel=1):
-        self.write('EXP:WAV:SOUR CH%i' %(channel))
+        '''
+        Set data source from a particular channel.
+
+        Args: 
+            channel: Int of channel to be set in range [1..4]
+
+        Return: None
+        '''
+        self.write("EXP:WAV:SOUR CH%i" % (channel))
 
     def getDataSource(self):
-        return self.ask('EXP:WAV:SOUR?')
+        '''
+        Get data source.
 
-    def setDataDestination(self, dest='/USB_FRONT/WFM'):
-        self.write('EXP:WAV:NAME %s' %(dest))
+        Args: 
+            None
+
+        Return: String of channel set.
+        '''
+        return self.ask("EXP:WAV:SOUR?")
+
+    def setDataDestination(self, dest="/USB_FRONT/WFM"):
+        '''
+        Set data destination for waveform. 
+
+        Args: 
+            dest: String pointing to the file accessible by the Oscilloscope for saving data.
+
+        Return: None
+        '''
+        self.write("EXP:WAV:NAME %s" % (dest))
 
     def getDataDestination(self):
-        return self.ask('EXP:WAV:NAME?')
+        '''
+        Get data destination for waveform. 
+
+        Args: 
+            None
+
+        Return: String pointing to the file where the current data is being saved. 
+        '''
+        return self.ask("EXP:WAV:NAME?")
 
     def saveWaveformData(self):
-        self.write('EXP:WAV:SAVE')
+        '''
+        Save the waveform data to the set destination from the set waveform.
 
-    def setDataFormat(self, form='CSV', bitvalue=0):
-        # Set format of saved data: ASCii, REAL, UINTeger, CSV
-        # Set accuracy of data: 0, 8, 16, 32 (0 is default for CSV; instrument decides)
-        self.write('FORM %s,%i' %(form, bitvalue))
+        Args: 
+            None
+
+        Return: None
+        '''
+        self.write("EXP:WAV:SAVE")
+
+    def setDataFormat(self, form="CSV", bitvalue=0):
+        '''
+        Set the data format in which the waveform data is saved. 
+
+        Args: 
+            form: String which sets the data format. Options are "ASC" (ascii), "REAL" (real), "UINT" (uinteger) and "CSV" (csv). 
+            bitvalue: Int which determines the accuracy of the saved data in bits. Options are 0, 8, 16, 32.
+
+        Return: None
+        '''
+        self.write("FORM %s,%i" % (form, bitvalue))
 
     def getDataFormat(self):
-        return self.ask('FORM?')
+        '''
+        Get the data format in which the waveform data is saved. 
+
+        Args: 
+            None
+
+        Return: String of the data format being saved. 
+        '''
+        return self.ask("FORM?")
     
     def getWaveformSampleRate(self):
-        return self.ask('ACQ:SRAT?')
-    
+        '''
+        Get the waveform sample rate.
+
+        Args: 
+            None
+
+        Return: String of the waveform sample rate.
+        '''
+        return self.ask("ACQ:SRAT?")
+
     def getSampleRate(self):
-        return self.ask('ACQ:POIN:ARAT?')
+        '''
+        Get the sample rate.
+
+        Args: 
+            None
+
+        Return: String of the sample rate.
+        '''
+        return self.ask("ACQ:POIN:ARAT?")
 
     ######################################################
-    # MEASUREMENT 
+    # MEASUREMENT
     ######################################################
 
     def startAquisition(self):
-        self.write('START')
+        '''
+        Start the aquisition of the measurement data.
+
+        Args: 
+            None
+
+        Return: None
+        '''
+        self.write("START")
 
     def stopAquisition(self):
-        self.write('STOP')
-        
-    def setMeasurement(self, index=1, mode='FREQ'):
-         # available modes: see documentation at https://www.rohde-schwarz.com/webhelp/RTM3000_HTML_UserManual_en/Content/abf34e6145b64437.htm
-        # Sets the measurement tracked in location 'index'
-        self.write('MEAS%i:MAIN %s' %(index, mode))
+        '''
+        Stop the aquisition of the measurement data.
+
+        Args: 
+            None
+
+        Return: None
+        '''
+        self.write("STOP")
+
+    def setMeasurement(self, index=1, mode="FREQ"):
+        '''
+        Set the measurement tracked in a particular index. 
+
+        Args: 
+            index: int that determines which location the measurement being set is recorded/tracked.
+            mode: String that determines the type of measurement recorded. Common modes include "FREQ" (frequency), "PER" (period), "PEAK" (peak), "AMP" (amplitude), and "MEAN" (mean). Refer to R&S Docs for full list.
+
+        Return: None
+        '''
+        self.write("MEAS%i:MAIN %s" % (index, mode))
 
     def getMeasurement(self, index=1):
-        return self.ask('MEAS%i:MAIN?' %(index))
+        '''
+        Get the measurement tracked in a particular index. 
 
-    def toggleMeasurement(self, index=1, state='ON'):
-        # Set measurement in index ON or OFF
-        self.write('MEAS%i %s' %(index, state))
-    
+        Args: 
+            index: int that determines which location the measurement being set is recorded/tracked.
+
+        Return: String that refers to the measurement tracked in that particular index.
+        '''
+        return self.ask("MEAS%i:MAIN?" % (index))
+
+    def toggleMeasurement(self, index=1, state="ON"):
+        '''
+        Turn the measurement on or off at a particular index.
+
+        Args: 
+            index: int that determines which location the measurement being set is recorded/tracked.
+            state: String that turns the measurement "ON" or "OFF".
+
+        Return: None
+        '''
+        self.write("MEAS%i %s" % (index, state))
+
     def setMeasurementSource(self, index=1, channel=1):
-        self.write('MEAS%i:SOUR CH%i' %(index, channel))
+        '''
+        Set the source channel for which the measurement of a particular index is recorded.
+
+        Args: 
+            index: int that determines which location the measurement being set is recorded/tracked.
+            channel: Int of channel to be set in range [1..4]
+
+        Return: None
+        '''
+        self.write("MEAS%i:SOUR CH%i" % (index, channel))
 
     def setArbitraryMeasurementSource(self, index, source):
-        self.write(f'MEAS{index}:SOUR {source}')
-        
-    def getMeasurementSource(self, index=1):
-        return self.ask('MEAS%i:SOUR?' %(index, src))
+        '''
+        Set the measurement source at a particular index. 
 
-    def toggleMeasurementStats(self, state='OFF'):
-        self.write('MEAS:STAT %s' %(state))
+        Args: 
+            index: int that determines which location the measurement being set is recorded/tracked.
+            source: String that determines arbitrary measurment source. Can be channel, math, reference or digital. 
+
+        Return: None
+        '''
+        self.write(f"MEAS{index}:SOUR {source}")
+
+    def getMeasurementSource(self, index=1):
+        '''
+        Get the measurement source at a particular index. 
+
+        Args: 
+            index: int that determines which location the measurement being set is recorded/tracked.
+
+        Return: String of the measurement source. 
+        '''
+        return self.ask("MEAS%i:SOUR?" % (index, src))
+
+    def toggleMeasurementStats(self, state="OFF"):
+        '''
+        Toggle statistics of the measurements being made.
+
+        Args: 
+            state: "ON" or "OFF".
+
+        Return: None
+        '''
+        self.write("MEAS:STAT %s" % (state))
 
     def resetMeasurementStats(self, ch=1):
-        # Resets measurement statistics 
-        self.write('MEAS%i:STAT:RES' %(ch))
+        '''
+        Reset the meaurement stats being recorded for a particular channel.
 
-    def toggleAutoMeasureTScale(self, state='ON'):
-        self.write('MEAS1:TIM:AUTO')
+        Args: 
+            ch: Integar of the channel being set in the range [1..4]
+
+        Return: None
+        '''
+        self.write("MEAS%i:STAT:RES" % (ch))
+
+    def toggleAutoMeasureTScale(self, state="ON"):
+        '''
+        Set the auto measure of time scale.
+
+        Args: 
+            state: "ON" or "OFF"
+
+        Return: None
+        '''
+        self.write("MEAS1:TIM:AUTO")
 
     def setMeasureTScale(self, dt=200e-6):
-        # manually set time to wait before measurement is returned. Should be atleast 12*horizontal_scale + trigger_period in seconds
-        self.write('MEAS1:TIM %.3f' %(dt))
+        '''
+        Manually set the time to wait before a measurement is returned. 
+
+        Args: 
+            dt: Float of time to wait in seconds. Should be atleast 12*(horizontal scale) + (trigger period) in seconds.
+
+        Return: None
+        '''
+        self.write("MEAS1:TIM %.3f" % (dt))
 
     def getMeasurementResult(self, index=1):
-        return self.ask('MEAS%i:RES?' %(index))
-        
+        '''
+        Readout the measurement result at a particular index.
+
+        Args: 
+            index: integar for measurement result.
+
+        Return: String of measurement result.
+        '''
+        return self.ask("MEAS%i:RES?" % (index))
+
     def getMeasurementAvg(self, index=1):
-        return self.ask('MEAS%i:RES:AVG?' %(index))
+        '''
+        Readout the measurement average at a particular index.
+
+        Args: 
+            index: integar for measurement result.
+
+        Return: String of measurement average.
+        '''
+        return self.ask("MEAS%i:RES:AVG?" % (index))
 
     def getMeasurementStd(self, index=1):
-        return self.ask('MEAS%i:RES:STDD?' %(index))
+        '''
+        Readout the measurement standard deviation at a particular index.
+
+        Args: 
+            index: integar for measurement result.
+
+        Return: String of measurement standard deviation.
+        '''
+        return self.ask("MEAS%i:RES:STDD?" % (index))
 
     ######################################################
     # AQUISITION
     ######################################################
 
-    def setAquisitionType(self, aq='AVER'):
-        self.write(f'ACQ:TYPE {aq}')
+    def setAquisitionType(self, aq="AVER"):
+        self.write(f"ACQ:TYPE {aq}")
 
     def getAquisitionType(self):
-        return self.ask('ACQ:TYPE?')
+        return self.ask("ACQ:TYPE?")
 
     def setAverageCount(self, val=1000):
-        self.write(f'ACQ:AVER:COUN {val}')
+        self.write(f"ACQ:AVER:COUN {val}")
 
     def getAverageCount(self):
-        return self.ask('ACQ:AVER:CURR?')
+        return self.ask("ACQ:AVER:CURR?")
 
-    def setSampleMode(self, mode='SAMP'):
-        self.write(f'CHAN:TYPE {mode}')
+    def setSampleMode(self, mode="SAMP"):
+        self.write(f"CHAN:TYPE {mode}")
 
     def getSampleMode(self):
-        return self.ask('CHAN:TYPE?')
+        return self.ask("CHAN:TYPE?")
 
-    def setSampleState(self, state='OFF'):
-        self.write(f'CHAN:ARIT {state}')
-    
+    def setSampleState(self, state="OFF"):
+        self.write(f"CHAN:ARIT {state}")
+
     ######################################################
     # CHANNEL SETUP
     ######################################################
 
-    def toggleChannel(self, channel=1, status='ON'):
-        self.write('CHAN%i:STAT %s' %(channel,status))
+    def toggleChannel(self, channel=1, status="ON"):
+        self.write("CHAN%i:STAT %s" % (channel, status))
 
     def statusChannel(self, channel=1):
-        return self.ask('CHAN%i:STAT?' %(channel))
+        return self.ask("CHAN%i:STAT?" % (channel))
 
-    def setChanCoupling(self, channel=1, coup='DCLimit'):
-        self.write('CHAN%i:COUP %s' %(channel,coup))
+    def setChanCoupling(self, channel=1, coup="DCLimit"):
+        self.write("CHAN%i:COUP %s" % (channel, coup))
 
     def getChanCoupling(self, channel=1):
-        self.ask('CHAN%i:COUP?' %(channel))
-    
+        self.ask("CHAN%i:COUP?" % (channel))
+
     ######################################################
     # WAVEFORM GENERATOR
     ######################################################
 
-    def setWaveFunction(self, fun='SIN'):
+    def setWaveFunction(self, fun="SIN"):
         # Sets the generated waveform to DC, SINusoid, SQUare, PULSe, TRIangle, RAMP, SINC, ARBitrary, EXPonential
-        self.write('WGEN:FUNC %s' %(fun))
+        self.write("WGEN:FUNC %s" % (fun))
 
     def getWaveFunction(self):
-        return self.ask('WGEN:FUNC?')
+        return self.ask("WGEN:FUNC?")
 
     def setWaveVoltage(self, amp=2.5e-1):
         # Sets the waveform generated amplitude
         self.wavevolt = amp
-        self.write('WGEN:VOLT %.2e' %(amp))
+        self.write("WGEN:VOLT %.2e" % (amp))
 
     def getWaveVoltage(self):
-        return self.ask('WGEN:VOLT?')
+        return self.ask("WGEN:VOLT?")
 
     def setWaveVoltOffset(self, offset=0):
         # Sets the waveform offset
-        self.write('WGEN:VOLT:OFFS %.2e' %(offset))
+        self.write("WGEN:VOLT:OFFS %.2e" % (offset))
 
     def getWaveVoltOffset(self):
-        return self.ask('WGEN:VOLT:OFFS?')
+        return self.ask("WGEN:VOLT:OFFS?")
 
     def setWaveVoltFrequency(self, freq=1e4):
         # Sets the waveform frequency in Hz
-        self.write('WGEN:FREQ %.2e' %(freq))
+        self.write("WGEN:FREQ %.2e" % (freq))
 
     def getWaveVoltFrequency(self):
-        return self.ask('WGEN:FREQ?')
+        return self.ask("WGEN:FREQ?")
 
     def setWaveNoise(self, noise=0e0):
         # Sets noise in waveform in absolute volts
-        self.write('WGEN:NOIS:ABS %.2e' %(noise))
+        self.write("WGEN:NOIS:ABS %.2e" % (noise))
 
     def getWaveNoise(self):
-        return self.ask('WGEN:NOIS:ABS?')
+        return self.ask("WGEN:NOIS:ABS?")
 
-    def toggleWaveform(self, status='OFF'):
-        self.write('WGEN:OUTP %s' %(status))
+    def toggleWaveform(self, status="OFF"):
+        self.write("WGEN:OUTP %s" % (status))
 
     def getWaveformStatus(self):
-        return self.ask('WGEN:OUTP?')
+        return self.ask("WGEN:OUTP?")
 
-    def toggleWaveformBurst(self, status='ON'):
-        self.write('WGEN:BURS %s' %(status))
+    def toggleWaveformBurst(self, status="ON"):
+        self.write("WGEN:BURS %s" % (status))
 
     def getWaveformBurst(self):
-        return self.ask('WGEN:BURS?')
+        return self.ask("WGEN:BURS?")
 
     def setWaveformBurstCount(self, cycles=10):
-        self.write('WGEN:BURS:NCYC %i' %(cycles))
+        self.write("WGEN:BURS:NCYC %i" % (cycles))
 
     def getWaveformBurstCount(self):
-        return self.ask('WGEN:BURS:NCYC?')
+        return self.ask("WGEN:BURS:NCYC?")
 
     def setWaveformBurstIdle(self, time=1e-1):
-        self.write('WGEN:BURS:ITIM %.2e' %(time))
+        self.write("WGEN:BURS:ITIM %.2e" % (time))
 
     def getWaveformBurstIdle(self):
-        return self.ask('WGEN:BURS:ITIM?')
+        return self.ask("WGEN:BURS:ITIM?")
 
     def setStartFreqSweep(self, freq=10e3):
-        self.write(f'WGEN:SWE:FST {freq}')
+        self.write(f"WGEN:SWE:FST {freq}")
 
     def setEndFreqSweep(self, freq=10e4):
-        self.write(f'WGEN:SWE:FEND {freq}')
+        self.write(f"WGEN:SWE:FEND {freq}")
 
     def setSweepTime(self, time=1):
-        self.write(f'WGEN:SWE:TIME {time}')
+        self.write(f"WGEN:SWE:TIME {time}")
 
-    def setSweepType(self, style='LIN'):
-        self.write(f'WGEN:SWE:TYPE {style}')
+    def setSweepType(self, style="LIN"):
+        self.write(f"WGEN:SWE:TYPE {style}")
 
-    def toggleSweep(self, toggle='OFF'):
-        self.write(f'WGEN:SWE:ENAB {toggle}')
-        
+    def toggleSweep(self, toggle="OFF"):
+        self.write(f"WGEN:SWE:ENAB {toggle}")
+
     def getWaveInfo(self):
         wavefunc = self.getWaveFunction()
         wavevolt = self.getWaveVoltage()
         wavefreq = self.getWaveVoltFrequency()
         return wavefunc, wavevolt, wavefreq
-    
-    def setWaveInfo(self, fun='SIN', amp=2.5e-1, offset=0, freq=1e4):
+
+    def setWaveInfo(self, fun="SIN", amp=2.5e-1, offset=0, freq=1e4):
         self.setWaveFunction(fun)
         self.setWaveVoltage(amp)
         self.setWaveVoltOffset(offset)
         self.setWaveVoltFrequency(freq)
 
     ######################################################
-    # FFT 
+    # FFT
     ######################################################
-        
+
     def enableSpec(self):
-        self.write('SPEC:STAT ON')
+        self.write("SPEC:STAT ON")
 
     def disableSpec(self):
-        self.write('SPEC:STAT OFF')
+        self.write("SPEC:STAT OFF")
 
     def setSpecChan(self, channel=1):
-        self.write(f'SPEC:SOUR CH{channel}')
+        self.write(f"SPEC:SOUR CH{channel}")
 
-    def setSpecWindowType(self, win='HANN'):
-        self.write(f'SPEC:FREQ:WIND:TYPE {win}')
+    def setSpecWindowType(self, win="HANN"):
+        self.write(f"SPEC:FREQ:WIND:TYPE {win}")
 
-    def setSpecScaling(self, scale='DBM'):
-        self.write(f'SPEC:FREQ:MAGN:SCAL {scale}')
+    def setSpecScaling(self, scale="DBM"):
+        self.write(f"SPEC:FREQ:MAGN:SCAL {scale}")
 
     def setSpecFreqCenter(self, center=25e3):
-        self.write(f'SPEC:FREQ:CENT {int(center)}')
+        self.write(f"SPEC:FREQ:CENT {int(center)}")
 
     def setSpecFreqSpan(self, span=50e3):
-        self.write(f'SPEC:FREQ:SPAN {int(span)}')
+        self.write(f"SPEC:FREQ:SPAN {int(span)}")
 
     def setSpecFreqStart(self, start=1e3):
-        self.write(f'SPEC:FREQ:STAR {int(start)}')
+        self.write(f"SPEC:FREQ:STAR {int(start)}")
 
     def getSpecWavData(self):
-        self.ask('SPEC:WAV:SPEC:DATA?')
+        self.ask("SPEC:WAV:SPEC:DATA?")
 
     ######################################################
     # MATHEMATICS
     ######################################################
 
     def setMathScale(self, index=1, scale=1):
-        self.write(f'CALC:MATH{index}:SCAL {scale}')
+        self.write(f"CALC:MATH{index}:SCAL {scale}")
 
     def getMathScale(self, index=1):
-        return self.ask(f'CALC:MATH{index}:SCAL?')
+        return self.ask(f"CALC:MATH{index}:SCAL?")
 
     def subtractChannels(self, channel_one=1, channel_two=2, waveform=1):
-        self.write(f'CALC:MATH{waveform}:EXPR:DEF "SUB(CH{channel_one},CH{channel_two}) in V"')
+        self.write(
+            f'CALC:MATH{waveform}:EXPR:DEF "SUB(CH{channel_one},CH{channel_two}) in V"'
+        )
 
     def addChannels(self, channel_one=1, channel_two=2, waveform=1):
-        self.write(f'CALC:MATH{waveform}:EXPR:DEF "ADD(CH{channel_one},CH{channel_two}) in V"')
+        self.write(
+            f'CALC:MATH{waveform}:EXPR:DEF "ADD(CH{channel_one},CH{channel_two}) in V"'
+        )
 
-    def filterLP(self, waveform=1, ref='M1', freq=10e4):
+    def filterLP(self, waveform=1, ref="M1", freq=10e4):
         self.write(f'CALC:MATH{waveform}:EXPR:DEF "LP({ref},{freq})"')
 
     def enableMath(self, index=1):
-        self.write(f'CALC:MATH{index}:STAT ON')
-        
+        self.write(f"CALC:MATH{index}:STAT ON")
+
     ######################################################
-    # CUSTOM SEQUENCES 
+    # CUSTOM SEQUENCES
     ######################################################
 
     def simpleSetup(self, burst=True, trig=0):
-        channels = [1,2]
+        channels = [1, 2]
         for channel in channels:
-            self.toggleChannel(channel=channel, status='ON')
+            self.toggleChannel(channel=channel, status="ON")
             if channel == 2:
-                self.setChanCoupling(channel=channel,coup='DCLimit')
+                self.setChanCoupling(channel=channel, coup="DCLimit")
             else:
-                self.setChanCoupling(channel=channel,coup='ACLimit')
+                self.setChanCoupling(channel=channel, coup="ACLimit")
         self.simpleEdgeTrigger(level=trig)
         self.simpleWaveform(cycles=100, burst=burst)
         self.SimpleSetupStatus = True
-        
-    def simpleEdgeTrigger(self, channel=2, level=0, coupl='DC', mode='RISE'):
-        self.setTriggerMode('A', 'NORM')
-        self.setTriggerType('A', 'EDGE')
-        self.setTriggerSource('A', channel)
-        self.setTriggerEdgeCoupling('A', coupl)
-        self.setTriggerEdgeSlope('A', mode)
+
+    def simpleEdgeTrigger(self, channel=2, level=0, coupl="DC", mode="RISE"):
+        self.setTriggerMode("A", "NORM")
+        self.setTriggerType("A", "EDGE")
+        self.setTriggerSource("A", channel)
+        self.setTriggerEdgeCoupling("A", coupl)
+        self.setTriggerEdgeSlope("A", mode)
         self.setTriggerEdgeLevel(channel, level)
 
-    def simpleWaveform(self, fun='SIN', amp=1, offset=0, freq=1e4, delay=1e-1, cycles=5, burst=True, channel=2):
-        self.toggleWaveform('ON')
+    def simpleWaveform(
+        self,
+        fun="SIN",
+        amp=1,
+        offset=0,
+        freq=1e4,
+        delay=1e-1,
+        cycles=5,
+        burst=True,
+        channel=2,
+    ):
+        self.toggleWaveform("ON")
         self.setWaveInfo(fun, amp, offset, freq)
-        self.setVerticalScale(channel=channel, div=amp/3)
+        self.setVerticalScale(channel=channel, div=amp / 3)
         self.setVerticalOffset(channel=channel, offset=0)
         if burst:
-            self.toggleWaveformBurst('ON')
+            self.toggleWaveformBurst("ON")
             self.setWaveformBurstCount(cycles)
             self.setWaveformBurstIdle(delay)
-
 
     def setSimpleMeasurements(self):
         self.setMeasurementSource(index=1, channel=1)
@@ -531,12 +1105,12 @@ class RTM3004():
         self.setMeasurementSource(index=6, channel=2)
         self.setMeasurementSource(index=7, channel=2)
         self.setMeasurementSource(index=8, channel=2)
-        self.setMeasurement(index=1, mode='PEAK')
-        self.setMeasurement(index=5, mode='PEAK')        
-        self.setMeasurement(index=2, mode='FREQ')
-        self.setMeasurement(index=6, mode='FREQ')        
-        self.setMeasurement(index=3, mode='MEAN')
-        self.setMeasurement(index=7, mode='MEAN')
+        self.setMeasurement(index=1, mode="PEAK")
+        self.setMeasurement(index=5, mode="PEAK")
+        self.setMeasurement(index=2, mode="FREQ")
+        self.setMeasurement(index=6, mode="FREQ")
+        self.setMeasurement(index=3, mode="MEAN")
+        self.setMeasurement(index=7, mode="MEAN")
         self.SimpleMeasurementStatus = True
 
     def getSimpleMeasurements(self):
@@ -551,7 +1125,7 @@ class RTM3004():
     def getMeasurements(self, measures=8):
         data = []
         for i in range(measures):
-            data.append(self.getMeasurementResult(index=i+1)[:-1])
+            data.append(self.getMeasurementResult(index=i + 1)[:-1])
         return data
 
     def getSimpleMean(self):
@@ -572,13 +1146,12 @@ class RTM3004():
         mean2 = self.getMeasurementStd(index=7)
         return [peak1[:-1], peak2[:-1], freq1[:-1], freq2[:-1], mean1[:-1], mean2[:-1]]
 
-    
     def setSimpleScale(self):
         if not self.SimpleSetupStatus:
             print("simpleSetup is not set and simple scaling can't be done.")
             return 0
         amp_scale = self.wavevolt
-        self.fixClipping(index=5, channel=2, scale=amp_scale/2)
+        self.fixClipping(index=5, channel=2, scale=amp_scale / 2)
         self.fixClipping(index=1, channel=1, scale=0.01)
         return 1
 
@@ -586,6 +1159,3 @@ class RTM3004():
         for i in range(8):
             ch = i + 1
             self.resetMeasurementStats(ch=ch)
-
-        
-        
