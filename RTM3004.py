@@ -694,9 +694,9 @@ class RTM3004:
     # MEASUREMENT
     ######################################################
 
-    def startAquisition(self):
+    def startAcquisition(self):
         '''
-        Start the aquisition of the measurement data.
+        Start the acquisition of the measurement data.
 
         Args: 
             None
@@ -705,9 +705,9 @@ class RTM3004:
         '''
         self.write("START")
 
-    def stopAquisition(self):
+    def stopAcquisition(self):
         '''
-        Stop the aquisition of the measurement data.
+        Stop the acquisition of the measurement data.
 
         Args: 
             None
@@ -846,7 +846,7 @@ class RTM3004:
         Readout the measurement average at a particular index.
 
         Args: 
-            index: integar for measurement result.
+            index: integar for measurement result. 
 
         Return: String of measurement average.
         '''
@@ -857,35 +857,91 @@ class RTM3004:
         Readout the measurement standard deviation at a particular index.
 
         Args: 
-            index: integar for measurement result.
+            index: integar for measurement result. 
 
         Return: String of measurement standard deviation.
         '''
         return self.ask("MEAS%i:RES:STDD?" % (index))
 
     ######################################################
-    # AQUISITION
+    # ACQUISITION
     ######################################################
 
-    def setAquisitionType(self, aq="AVER"):
+    def setAcquisitionType(self, aq="AVER"):
+        '''
+        Set the acquisition type of the readout.
+
+        Args: 
+            aq: String with options available in documentation. Defaults to "AVER" which is average.
+
+        Return: None
+        '''
         self.write(f"ACQ:TYPE {aq}")
 
-    def getAquisitionType(self):
+    def getAcquisitionType(self):
+        '''
+        Get the acquisition type of the readout.
+
+        Args: 
+            None
+
+        Return: String of acquisition type.
+        '''
         return self.ask("ACQ:TYPE?")
 
     def setAverageCount(self, val=1000):
+        '''
+        Set the average count value. 
+
+        Args: 
+            val:Int that determines the value of of the average count.
+
+        Return: None
+        '''
         self.write(f"ACQ:AVER:COUN {val}")
 
     def getAverageCount(self):
+        '''
+        Get the average count value. 
+
+        Args: 
+            None
+
+        Return: String of the average count value.
+        '''
         return self.ask("ACQ:AVER:CURR?")
 
     def setSampleMode(self, mode="SAMP"):
+        '''
+        Set the sample mode of the acquisition.
+
+        Args: 
+            mode: String that sets the mode, defaults to "SAMP".
+
+        Return: None
+        '''
         self.write(f"CHAN:TYPE {mode}")
 
     def getSampleMode(self):
+        '''
+        Get the sample mode of the acquisition.
+
+        Args: 
+            None
+
+        Return: String of the set sample mode.
+        '''
         return self.ask("CHAN:TYPE?")
 
     def setSampleState(self, state="OFF"):
+        '''
+        Toggle whether the sample state is on or off.
+
+        Args: 
+            state: String of "ON" or "OFF".
+
+        Return: None
+        '''
         self.write(f"CHAN:ARIT {state}")
 
     ######################################################
@@ -893,15 +949,49 @@ class RTM3004:
     ######################################################
 
     def toggleChannel(self, channel=1, status="ON"):
+        '''
+        Toggle whether a particular channel is on or off.
+
+        Args: 
+            channel: Int in the range [1..4] which corresponds with one of the four channels.
+            status: String that sets the channel in question to "ON" or "OFF".
+
+        Return: None
+        '''
         self.write("CHAN%i:STAT %s" % (channel, status))
 
     def statusChannel(self, channel=1):
+        '''
+        Check whether a particular channel is on or off.
+
+        Args: 
+            channel: Int in the range [1..4] which corresponds with one of the four channels.
+
+        Return: String of the status of that channel.
+        '''
         return self.ask("CHAN%i:STAT?" % (channel))
 
     def setChanCoupling(self, channel=1, coup="DCLimit"):
+        '''
+        Set the coupling of a particular channel.
+
+        Args: 
+            channel: Int in the range [1..4] which corresponds with one of the four channels.
+            coup: String which determines the coupling being set. Options are "DCL" (DCLimit), "ACL" (ACLimit), "GND" and "DC". 
+
+        Return: None
+        '''
         self.write("CHAN%i:COUP %s" % (channel, coup))
 
     def getChanCoupling(self, channel=1):
+        '''
+        Get the coupling of a particular channel.
+
+        Args: 
+            channel: Int in the range [1..4] which corresponds with one of the four channels.
+
+        Return: String of the currently set coupling for that particular channel.
+        '''
         self.ask("CHAN%i:COUP?" % (channel))
 
     ######################################################
@@ -909,87 +999,286 @@ class RTM3004:
     ######################################################
 
     def setWaveFunction(self, fun="SIN"):
-        # Sets the generated waveform to DC, SINusoid, SQUare, PULSe, TRIangle, RAMP, SINC, ARBitrary, EXPonential
+        '''
+        Sets the generated waveform to a particular shape.
+
+        Args: 
+            fun: String that determines the shape of the generated waveform. Options are: 
+                "DC", "SIN" (sinusoid), "SQU" (square), "PULS" (pulse), "TRI" (triangle), "RAMP", "SINC", "ARB" (arbitrary), "EXP" (exponential).
+
+        Return: None
+        '''
         self.write("WGEN:FUNC %s" % (fun))
 
     def getWaveFunction(self):
+        '''
+        Get the generated waveform shape/function.
+        
+        Args: 
+            None
+        
+        Return: String of the function setting for the generated waveform.
+        '''
         return self.ask("WGEN:FUNC?")
 
     def setWaveVoltage(self, amp=2.5e-1):
-        # Sets the waveform generated amplitude
+        '''
+        Set the amplitude for the generated waveform.
+        
+        Args: 
+            amp: Float of the amplitude being set. 
+        
+        Return: None
+        '''
         self.wavevolt = amp
         self.write("WGEN:VOLT %.2e" % (amp))
 
     def getWaveVoltage(self):
+        '''
+        Get the amplitude for the generated waveform.
+        
+        Args: 
+            None
+        
+        Return: String of the amplitude set for the generated waveform.
+        '''
         return self.ask("WGEN:VOLT?")
 
     def setWaveVoltOffset(self, offset=0):
-        # Sets the waveform offset
+        '''
+        Set the offset of the generated waveform.
+        
+        Args: 
+            offset: Float for setting voltage offset.
+        
+        Return: None
+        '''
         self.write("WGEN:VOLT:OFFS %.2e" % (offset))
 
     def getWaveVoltOffset(self):
+        '''
+        Get the offset of the generated waveform.
+        
+        Args: 
+            None
+        
+        Return: String of the voltage offset value.
+        '''
         return self.ask("WGEN:VOLT:OFFS?")
 
     def setWaveVoltFrequency(self, freq=1e4):
-        # Sets the waveform frequency in Hz
+        '''
+        Set the waveform frequency in Hz.
+        
+        Args: 
+            freq: Float of the frequency to be set, in Hz.
+        
+        Return: None
+        '''
         self.write("WGEN:FREQ %.2e" % (freq))
 
     def getWaveVoltFrequency(self):
+        '''
+        Get the waveform frequency in Hz.
+        
+        Args: 
+            None
+        
+        Return: String of the set waveform frequency.
+        '''
         return self.ask("WGEN:FREQ?")
 
-    def setWaveNoise(self, noise=0e0):
-        # Sets noise in waveform in absolute volts
+    def setWaveNoise(self, noise=0):
+        '''
+        Set the noise in the generated waveform in volts.
+        
+        Args: 
+            noise: Float which determines the noise [V].
+        
+        Return: None
+        '''
         self.write("WGEN:NOIS:ABS %.2e" % (noise))
 
     def getWaveNoise(self):
+        '''
+        Get the noise of the generated waveform in volts.
+        
+        Args: 
+            None
+        
+        Return: String of the noise in volts.
+        '''
         return self.ask("WGEN:NOIS:ABS?")
 
     def toggleWaveform(self, status="OFF"):
+        '''
+        Toggle if a waveform is enabled or not. 
+        
+        Args: 
+            status: String to which can be set to "ON" or "OFF".
+        
+        Return: None
+        '''
         self.write("WGEN:OUTP %s" % (status))
 
     def getWaveformStatus(self):
+        '''
+        Check if the waveform generator is on or off.
+        
+        Args: 
+            None
+        
+        Return: String which informs the user if the waveform is on or off.
+        '''
         return self.ask("WGEN:OUTP?")
 
     def toggleWaveformBurst(self, status="ON"):
+        '''
+        Toggle the generated waveform to be output as a burst.
+        
+        Args: 
+            status: String that is "ON" or "OFF" 
+        
+        Return: None
+        '''
         self.write("WGEN:BURS %s" % (status))
 
     def getWaveformBurst(self):
+        '''
+        Check if the generated waveform is output as a burst.
+        
+        Args: 
+            None
+        
+        Return: String which informs if the generated waveform is in burst mode.
+        '''
         return self.ask("WGEN:BURS?")
 
     def setWaveformBurstCount(self, cycles=10):
+        '''
+        Set the number of cycles that a single burst lasts for.
+        
+        Args: 
+            cycles: Int that determines the number of cycles per burst.
+        
+        Return: None
+        '''
         self.write("WGEN:BURS:NCYC %i" % (cycles))
 
     def getWaveformBurstCount(self):
+        '''
+        Get the number of cycles per burst.
+        
+        Args: 
+            None
+        
+        Return: String containing the burst count information.
+        '''
         return self.ask("WGEN:BURS:NCYC?")
 
-    def setWaveformBurstIdle(self, time=1e-1):
+    def setWaveformBurstIdle(self, time=1e-1):        
+        '''
+        Set the idle time between bursts.
+        
+        Args: 
+            time: Float in seconds
+        
+        Return: None
+        '''
         self.write("WGEN:BURS:ITIM %.2e" % (time))
 
     def getWaveformBurstIdle(self):
+        '''
+        Get the idle time between bursts.
+        
+        Args: 
+            None
+        
+        Return: String of idle time between bursts.
+        '''
         return self.ask("WGEN:BURS:ITIM?")
 
     def setStartFreqSweep(self, freq=10e3):
+        '''
+        Set which frequency the frequency sweep mode starts at.
+        
+        Args: 
+            freq: Float in Hz where the sweep begins.
+        
+        Return: None
+        '''
         self.write(f"WGEN:SWE:FST {freq}")
 
     def setEndFreqSweep(self, freq=10e4):
+        '''
+        Set which frequency the frequency sweep mode ends at.
+        
+        Args: 
+            freq: Float in Hz where the sweep ends.
+        
+        Return: None
+        '''
         self.write(f"WGEN:SWE:FEND {freq}")
 
     def setSweepTime(self, time=1):
+        '''
+        Set the time over which the frequency sweep takes place.
+        
+        Args: 
+            time: Float which determines the sweep time in seconds.
+        
+        Return: None
+        '''
         self.write(f"WGEN:SWE:TIME {time}")
 
     def setSweepType(self, style="LIN"):
+        '''
+        Set the type of frequency sweep. Assumed linear by default.
+        
+        Args: 
+            style: String with options "LIN" (linear), "LOG" (logarithmic), "TRI" (triangle).
+        
+        Return: None
+        '''
         self.write(f"WGEN:SWE:TYPE {style}")
 
     def toggleSweep(self, toggle="OFF"):
+        '''
+        Toggle if the frequency sweep is active.
+        
+        Args: 
+            toggle: String of either "ON" or "OFF".
+        
+        Return: None
+        '''
         self.write(f"WGEN:SWE:ENAB {toggle}")
 
     def getWaveInfo(self):
+        '''
+        Get the waveform generator information in one tuple.
+        
+        Args: 
+            None
+        
+        Return: Tuple of strings in the order (wavefunction, amplitude, frequency).
+        '''
         wavefunc = self.getWaveFunction()
         wavevolt = self.getWaveVoltage()
         wavefreq = self.getWaveVoltFrequency()
         return wavefunc, wavevolt, wavefreq
 
     def setWaveInfo(self, fun="SIN", amp=2.5e-1, offset=0, freq=1e4):
+        '''
+        Set the waveform generator information in one method.
+        
+        Args: 
+            fun: String of the function type. 
+            amp: Float of the waveform amplitude in volts. 
+            offset: Float of the vertical waveform offset in volts. 
+            freq: Float of the waveform frequency in Hz.
+        
+        Return: None
+        '''
         self.setWaveFunction(fun)
         self.setWaveVoltage(amp)
         self.setWaveVoltOffset(offset)
@@ -1000,30 +1289,102 @@ class RTM3004:
     ######################################################
 
     def enableSpec(self):
+        '''
+        Enable the spectrogram view of the waveform.
+        
+        Args: 
+            None
+
+        Return: None
+        '''
         self.write("SPEC:STAT ON")
 
     def disableSpec(self):
+        '''
+        Disable the spectrogram view of the waveform.
+        
+        Args: 
+            None
+
+        Return: None
+        '''
         self.write("SPEC:STAT OFF")
 
     def setSpecChan(self, channel=1):
+        '''
+        Set the channel that is currently undergoing spectrogram analysis.
+        
+        Args: 
+            channel: Int ranging in [1..4] referring to the channel being analyzed.
+
+        Return: None
+        '''
         self.write(f"SPEC:SOUR CH{channel}")
 
     def setSpecWindowType(self, win="HANN"):
+        '''
+        Set the spectrum window type of the fft analysis.
+        
+        Args: 
+            win: String of the window setting. Options are "RECT" (rectangular), "HAMM" (hamming), "HANN" (hanning), "BLAC" (blackman-harris), and "FLAT" (flat top).
+
+        Return: None
+        '''
         self.write(f"SPEC:FREQ:WIND:TYPE {win}")
 
     def setSpecScaling(self, scale="DBM"):
+        '''
+        Set the spectrum scaling of the y-axis.
+        
+        Args: 
+            scale: String that determines the scaling. Options are "LIN" (linear), "DBM", "DBV", "DBUV".
+
+        Return: None
+        '''
         self.write(f"SPEC:FREQ:MAGN:SCAL {scale}")
 
     def setSpecFreqCenter(self, center=25e3):
+        '''
+        Set the center of the frequency spectrum.
+        
+        Args: 
+            center: Float of the center frequency displayed in Hz.
+
+        Return: None
+        '''
         self.write(f"SPEC:FREQ:CENT {int(center)}")
 
     def setSpecFreqSpan(self, span=50e3):
+        '''
+        Set the frequency span of the spectrum.
+        
+        Args: 
+            span: Float of the frequency span in Hz. 
+
+        Return: None
+        '''
         self.write(f"SPEC:FREQ:SPAN {int(span)}")
 
     def setSpecFreqStart(self, start=1e3):
+        '''
+        Start of the frequency spectrum in the display window.
+        
+        Args: 
+            start: Float of starting frequency in Hz.
+
+        Return: None
+        '''
         self.write(f"SPEC:FREQ:STAR {int(start)}")
 
     def getSpecWavData(self):
+        '''
+        Get the spectrum data.
+        
+        Args: 
+            None
+
+        Return: String of waveform data from the instrument.
+        '''
         self.ask("SPEC:WAV:SPEC:DATA?")
 
     ######################################################
@@ -1031,25 +1392,80 @@ class RTM3004:
     ######################################################
 
     def setMathScale(self, index=1, scale=1):
+        '''
+        Set the scale of the math waveform.
+        
+        Args: 
+            index: Int referring to the particular math waveform. In the range [1..5].
+            scale: Float setting the value to scale the waveform by.
+
+        Return: None
+        '''
         self.write(f"CALC:MATH{index}:SCAL {scale}")
 
     def getMathScale(self, index=1):
+        '''
+        Get the scale of the math waveform at that particular waveform.
+        
+        Args: 
+            index: Int referring to the particular math waveform. In the range [1..5].
+
+        Return: String of the scale by which the waveform is multiplied.
+        '''
         return self.ask(f"CALC:MATH{index}:SCAL?")
 
     def subtractChannels(self, channel_one=1, channel_two=2, waveform=1):
+        '''
+        Subtract two channels and display them as a particular waveform.
+        
+        Args: 
+            channel_one: Int referring to the first channel to be subtracted from.
+            channel_two: Int referring to the second channel, which will be subtracted from the first.
+            waveform: Int referring to the math waveform where the subtraction will be displayed.
+
+        Return: None
+        '''
         self.write(
             f'CALC:MATH{waveform}:EXPR:DEF "SUB(CH{channel_one},CH{channel_two}) in V"'
         )
 
     def addChannels(self, channel_one=1, channel_two=2, waveform=1):
+        '''
+        Add two channels and display them as a particular waveform.
+        
+        Args: 
+            channel_one: Int referring to the first channel to be added to.
+            channel_two: Int referring to the second channel, which will be added to the first.
+            waveform: Int referring to the math waveform where the addition will be displayed.
+
+        Return: None
+        '''
         self.write(
             f'CALC:MATH{waveform}:EXPR:DEF "ADD(CH{channel_one},CH{channel_two}) in V"'
         )
 
     def filterLP(self, waveform=1, ref="M1", freq=10e4):
+        '''
+        Low-Pass filter to be applied to a particular math waveform.
+        
+        Args: 
+            waveform: Int of the math waveform where the result will be displayed.
+            ref: String of the reference waveform which is filtered. The format is "M<i>" where <i> is an integer referring to the math waveform number.
+            freq: Float of the frequency where the Low-Pass filter is applied in Hz.
+
+        Return: None
+        '''
         self.write(f'CALC:MATH{waveform}:EXPR:DEF "LP({ref},{freq})"')
 
     def enableMath(self, index=1):
+        '''
+        Enable a particular math waveform.
+        
+        Args: 
+            index: Integer referring to the math waveform to be enabled. In the range [1..5].
+
+        Return: None
+        '''
         self.write(f"CALC:MATH{index}:STAT ON")
 
     ######################################################
@@ -1057,6 +1473,15 @@ class RTM3004:
     ######################################################
 
     def simpleSetup(self, burst=True, trig=0):
+        '''
+        Custom sequence created for quick and easy data taking. The prepares the first two channels of the oscilloscope, an edge trigger and generating waveform. The trigger here is set to be on channel 2 and the waveform generator is set to the default values in the simpleWaveform method. 
+        
+        Args: 
+            burst: Boolean which sets the burst functionality of the generating waveform. 
+            trig: Float which sets the trigger level.
+
+        Return: None
+        '''
         channels = [1, 2]
         for channel in channels:
             self.toggleChannel(channel=channel, status="ON")
@@ -1069,6 +1494,17 @@ class RTM3004:
         self.SimpleSetupStatus = True
 
     def simpleEdgeTrigger(self, channel=2, level=0, coupl="DC", mode="RISE"):
+        '''
+        Simple trigger that is set on a channel of choice.
+        
+        Args: 
+            channel: Int in the range [1..4] for which the trigger is set.
+            level: Float value for the trigger level used.
+            coupl: String to determine the coupling of the particular channel.
+            mode: String to determine which type of edge trigger is implemented.
+
+        Return: None
+        '''
         self.setTriggerMode("A", "NORM")
         self.setTriggerType("A", "EDGE")
         self.setTriggerSource("A", channel)
@@ -1087,6 +1523,21 @@ class RTM3004:
         burst=True,
         channel=2,
     ):
+        '''
+        Simple waveform generator setup. Combines a multitude of the previous waveform generator methods into one for ease-of-use. 
+        
+        Args: 
+            fun: String referring to the function of the generating waveform.
+            amp: Float referring to the amplitude of the generated waveform in volts.
+            offset: Float referring to the voltage offset in volts.
+            freq: Float which sets the frequency of the generated waveform in Hz.
+            delay: Float of the time delay between burst waveforms in seconds.
+            cycles: Int for the number of cycles that a burst setting would include.
+            burst: Boolean which determines if burst mode is enabled.
+            channel: Int in the range [1..4] for which the trigger is set.
+
+        Return: None
+        '''
         self.toggleWaveform("ON")
         self.setWaveInfo(fun, amp, offset, freq)
         self.setVerticalScale(channel=channel, div=amp / 3)
@@ -1097,6 +1548,20 @@ class RTM3004:
             self.setWaveformBurstIdle(delay)
 
     def setSimpleMeasurements(self):
+        '''
+        Sets commonly used measurements of the two channels into 8 indices. \\
+        In particular, assigns indices 1..4 to channel 1 and 5..8 to channel 2. The following are the recorded measurements: \\
+        Measure | Indices
+        Peak Amplitudes | 1, 5
+        Frequency | 2, 6
+        Mean | 3, 7
+        
+        
+        Args: 
+            None
+
+        Return: None
+        '''
         self.setMeasurementSource(index=1, channel=1)
         self.setMeasurementSource(index=2, channel=1)
         self.setMeasurementSource(index=3, channel=1)
@@ -1114,6 +1579,19 @@ class RTM3004:
         self.SimpleMeasurementStatus = True
 
     def getSimpleMeasurements(self):
+        '''
+        Returns the 6 measurements of the two channels set.
+        Measure | Indices
+        Peak Amplitudes | 1, 5
+        Frequency | 2, 6
+        Mean | 3, 7
+        
+        
+        Args: 
+            None
+
+        Return: List of measurements in the order [peak_ch1, peak_ch2, freq_ch1, freq_ch2, mean_ch1, mean_ch2].
+        '''
         peak1 = self.getMeasurementResult(index=1)
         peak2 = self.getMeasurementResult(index=5)
         freq1 = self.getMeasurementResult(index=2)
@@ -1122,13 +1600,29 @@ class RTM3004:
         mean2 = self.getMeasurementResult(index=7)
         return [peak1[:-1], peak2[:-1], freq1[:-1], freq2[:-1], mean1[:-1], mean2[:-1]]
 
-    def getMeasurements(self, measures=8):
+    def getMeasurements(self, measures=8):        
+        '''
+        Returns some number of measurement slots as a list regardless of the current settings.
+        
+        Args: 
+            measures: Int which determines the number of measurements to return. In the range [1..8].
+
+        Return: List of measurements.
+        '''
         data = []
         for i in range(measures):
             data.append(self.getMeasurementResult(index=i + 1)[:-1])
         return data
 
     def getSimpleMean(self):
+        '''
+        Returns the average measurement of the 6 measures, over whatever number of recorded waveforms is set.
+        
+        Args: 
+            None
+
+        Return: List of measurements.
+        '''
         peak1 = self.getMeasurementAvg(index=1)
         peak2 = self.getMeasurementAvg(index=5)
         freq1 = self.getMeasurementAvg(index=2)
@@ -1138,6 +1632,14 @@ class RTM3004:
         return [peak1[:-1], peak2[:-1], freq1[:-1], freq2[:-1], mean1[:-1], mean2[:-1]]
 
     def getSimpleSTD(self):
+        '''
+        Returns the standard deviation of the 6 measurements over whatever number of recorded waveforms are available at that time. 
+        
+        Args: 
+            None
+
+        Return: List of measurement standard deviations.
+        '''
         peak1 = self.getMeasurementStd(index=1)
         peak2 = self.getMeasurementStd(index=5)
         freq1 = self.getMeasurementStd(index=2)
@@ -1147,6 +1649,14 @@ class RTM3004:
         return [peak1[:-1], peak2[:-1], freq1[:-1], freq2[:-1], mean1[:-1], mean2[:-1]]
 
     def setSimpleScale(self):
+        '''
+        Ensures that both channel 1 and channel 2 are not clipping by referring to the corresponding amplitude peak measurements. 
+        
+        Args: 
+            None
+
+        Return: Int of 1 when complete.
+        '''
         if not self.SimpleSetupStatus:
             print("simpleSetup is not set and simple scaling can't be done.")
             return 0
@@ -1156,6 +1666,14 @@ class RTM3004:
         return 1
 
     def fullResetStats(self):
+        '''
+        Erases all previous recorded measurements.
+        
+        Args: 
+            None
+
+        Return: None
+        '''
         for i in range(8):
             ch = i + 1
             self.resetMeasurementStats(ch=ch)
